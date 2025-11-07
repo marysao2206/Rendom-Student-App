@@ -1,0 +1,581 @@
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Random Spinner Wheel</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Phosphor Icons (for visual clarity) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary-spin': '#FFD700', // Gold
+                        'primary-dark': '#1e3a8a', // Dark Blue
+                        'accent-1': '#ef4444', // Red
+                        'accent-2': '#10b981', // Green
+                        'accent-3': '#3b82f6', // Blue
+                        'accent-4': '#f97316', // Orange
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+<link rel="stylesheet" href="{{ url_for('static', filename='style2.css') }}">
+</head>
+
+<body class="p-4 md:p-8">
+ <div class="navbar">
+    <div class="logo">Random Student App</div>
+        <div class="nav-links">
+            <a href="{{ url_for('home') }}">Spinner</a>
+            <a href="{{ url_for('group_page') }}">Group</a>
+            <a href="{{ url_for('images_page') }}">Image</a>
+        </div>
+  </div>
+    <main class="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
+
+        <!-- 1. Inputs & Entries Panel -->
+        <div class="card p-6 order-1">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b pb-2 flex items-center">
+                <i class="ph ph-list text-xl mr-2"></i> Wheel Entries
+            </h2>
+
+            <!-- Add Text Entry -->
+            <div class="mb-4">
+                <label for="textEntryInput" class="block text-sm font-medium text-gray-700 mb-1">Add Name or Option:</label>
+                <div class="flex space-x-2">
+                    <input type="text" id="textEntryInput" placeholder="e.g., John, Team A, \$50"
+                        class="flex-grow p-2 border border-gray-300 rounded-lg focus:ring-accent-3 focus:border-accent-3 text-sm">
+                    <button id="addTextBtn"
+                        class="bg-accent-3 text-white p-2 rounded-lg font-semibold hover:bg-blue-500 transition duration-150 active:scale-95">
+                        <i class="ph ph-plus text-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Add Image Entry -->
+            <div class="mb-4 pt-4 border-t border-gray-100">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Add Image Entry (for logos/faces):</label>
+                <!-- File Upload -->
+                <div class="mb-3">
+                    <input type="file" id="imageFileInput" accept="image/*" multiple
+                        class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-spin file:text-gray-800 hover:file:bg-yellow-300 transition duration-150" />
+                </div>
+                <!-- Image URL -->
+                <div class="flex space-x-2">
+                    <input type="text" id="imageUrlInput" placeholder="Or paste image URL"
+                        class="flex-grow p-2 border border-gray-300 rounded-lg focus:ring-accent-2 focus:border-accent-2 text-sm">
+                    <button id="addImageUrlBtn"
+                        class="bg-accent-2 text-white p-2 rounded-lg font-semibold hover:bg-green-500 transition duration-150 active:scale-95">
+                        <i class="ph ph-link text-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Entry List -->
+            <div class="mt-6 border-t pt-4 border-gray-100">
+                <h3 class="text-lg font-bold mb-3 flex justify-between items-center">
+                    Current Options <span id="entryCount"
+                        class="bg-gray-100 px-3 py-1 text-sm font-semibold rounded-full">0</span>
+                </h3>
+                <div id="entryList" class="space-y-2 max-h-80 overflow-y-auto custom-scrollbar p-1">
+                    <p id="listPlaceholder" class="text-gray-500 text-sm text-center py-4">Add options to the wheel
+                        above.</p>
+                    <!-- Entries injected here -->
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="mt-6 flex space-x-2">
+                <button id="shuffleBtn"
+                    class="flex-1 bg-gray-200 text-gray-700 p-3 rounded-xl font-semibold hover:bg-gray-300 transition duration-150 active:scale-[0.98]">
+                    <i class="ph ph-shuffle text-lg mr-1"></i> Shuffle
+                </button>
+                <button id="clearAllBtn"
+                    class="flex-1 bg-red-50 text-red-600 p-3 rounded-xl font-semibold hover:bg-red-100 transition duration-150 active:scale-[0.98]">
+                    <i class="ph ph-trash text-lg mr-1"></i> Clear All
+                </button>
+            </div>
+        </div>
+
+        <!-- 2. Wheel Panel (Centered on large screens) -->
+        <div class="card p-6 col-span-1 lg:col-span-2 order-2 flex flex-col items-center">
+            <h2 class="text-3xl font-extrabold text-primary-dark mb-6">Spin The Wheel!</h2>
+            <div class="relative w-full max-w-lg mx-auto aspect-square">
+                <!-- Pointer -->
+                <div class="pointer" style="margin-top: -10px;"></div>
+                <!-- Canvas -->
+                <canvas id="wheelCanvas" width="500" height="500" class="mx-auto"></canvas>
+                <!-- Winner Card -->
+                <div id="winnerCard" class="hidden">
+                    <div id="winnerImageContainer"
+                        class="w-20 h-20 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
+                        <!-- Winner Image/Icon -->
+                    </div>
+                    <p class="text-sm font-semibold text-gray-500">The Winner is...</p>
+                    <h3 id="winnerName" class="text-3xl font-extrabold text-accent-4 mt-1"></h3>
+                </div>
+                <!-- Spin Button -->
+                <div id="spinButtonContainer" class="mt-6 flex justify-center">
+                    <button id="spinBtn"
+                        class="bg-accent-4 text-white text-xl font-bold py-4 px-12 rounded-full shadow-xl shadow-orange-300/50 hover:bg-orange-600 transition duration-300 active:scale-[0.98] flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="ph ph-dice-three text-2xl mr-3"></i>
+                        SPIN!
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // --- Configuration & Global State ---
+        const WHEEL_COLORS = [
+            '#ef4444', // Red (accent-1)
+            '#10b981', // Green (accent-2)
+            '#3b82f6', // Blue (accent-3)
+            '#f97316', // Orange (accent-4)
+            '#8b5cf6', // Violet
+            '#ec4899', // Pink
+            '#eab308', // Yellow
+            '#14b8a6', // Teal
+        ];
+        const ENTRY_STORAGE_KEY = 'ultimateSpinnerEntries';
+
+        let entries = [];
+        let isSpinning = false;
+
+        // Canvas context and size
+        const canvas = document.getElementById('wheelCanvas');
+        const ctx = canvas.getContext('2d');
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const radius = centerX - 10; // Minus 10 for padding
+
+        // --- DOM Elements ---
+        const textEntryInput = document.getElementById('textEntryInput');
+        const imageUrlInput = document.getElementById('imageUrlInput');
+        const imageFileInput = document.getElementById('imageFileInput');
+        const addTextBtn = document.getElementById('addTextBtn');
+        const addImageUrlBtn = document.getElementById('addImageUrlBtn');
+        const spinBtn = document.getElementById('spinBtn');
+        const shuffleBtn = document.getElementById('shuffleBtn');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        const entryList = document.getElementById('entryList');
+        const entryCount = document.getElementById('entryCount');
+        const listPlaceholder = document.getElementById('listPlaceholder');
+        const winnerCard = document.getElementById('winnerCard');
+        const winnerName = document.getElementById('winnerName');
+        const winnerImageContainer = document.getElementById('winnerImageContainer');
+
+
+        // --- Utility Functions ---
+
+        /** Generates a simple unique ID. */
+        const generateId = () => crypto.randomUUID();
+
+        /** Loads entries from localStorage. */
+        const loadEntries = () => {
+            try {
+                const storedEntries = localStorage.getItem(ENTRY_STORAGE_KEY);
+                entries = storedEntries ? JSON.parse(storedEntries) : [
+                    { id: generateId(), name: "Spin Me!", type: "text" },
+                    { id: generateId(), name: "Maybe This?", type: "text" },
+                    { id: generateId(), name: "Image Demo", type: "image", data: "https://placehold.co/100x100/3b82f6/ffffff?text=IMG" },
+                    { id: generateId(), name: "Definitely Not", type: "text" },
+                ];
+            } catch (error) {
+                console.error("Could not load entries from localStorage:", error);
+                entries = [];
+            }
+        };
+
+        /** Saves entries to localStorage. */
+        const saveEntries = () => {
+            try {
+                localStorage.setItem(ENTRY_STORAGE_KEY, JSON.stringify(entries));
+            } catch (error) {
+                console.error("Could not save entries to localStorage:", error);
+            }
+        };
+
+        /** Shuffles the entries array. */
+        const shuffleEntries = () => {
+            for (let i = entries.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [entries[i], entries[j]] = [entries[j], entries[i]];
+            }
+            renderEntryList();
+            drawWheel(0); // Redraw wheel in the new order
+            saveEntries();
+        };
+
+        // --- Entry Management ---
+
+        /** Renders the list of entries and updates the wheel. */
+        const renderEntryList = () => {
+            entryList.innerHTML = '';
+            entryCount.textContent = entries.length;
+
+            if (entries.length === 0) {
+                listPlaceholder.classList.remove('hidden');
+                spinBtn.disabled = true;
+                return;
+            }
+
+            listPlaceholder.classList.add('hidden');
+            spinBtn.disabled = false;
+
+            entries.forEach(entry => {
+                const isImage = entry.type === 'image';
+                const container = document.createElement('div');
+                container.className = 'flex items-center justify-between p-2 bg-gray-50 rounded-lg shadow-sm hover:bg-gray-100 transition duration-150';
+
+                // Decide the icon/image for the list
+                let displayContent;
+                if (isImage) {
+                    displayContent = `<img src="${entry.data}" alt="Entry Image" onerror="this.onerror=null;this.src='https://placehold.co/28x28/6b7280/ffffff?text=X'; this.classList.add('p-1');" class="w-7 h-7 object-cover rounded-full flex-shrink-0">`;
+                } else {
+                    displayContent = `<i class="ph ph-text-aa text-xl text-accent-3"></i>`;
+                }
+
+                container.innerHTML = `
+                    <div class="flex items-center space-x-3 truncate">
+                        ${displayContent}
+                        <span class="text-sm font-medium text-gray-800 truncate">${entry.name}</span>
+                    </div>
+                    <button data-id="${entry.id}" class="remove-entry-btn text-red-500 hover:text-red-700 p-1 transition duration-150 rounded-full" aria-label="Remove ${entry.name}">
+                        <i class="ph ph-x-circle text-lg pointer-events-none"></i>
+                    </button>
+                `;
+                entryList.appendChild(container);
+
+                if (isImage) {
+                    // Preload image for wheel drawing
+                    const img = new Image();
+                    img.src = entry.data;
+                    entry.imageObject = img;
+                }
+            });
+
+            drawWheel(0);
+            hideResult();
+        };
+
+        /** Hides the winner announcement card. */
+        const hideResult = () => {
+            winnerCard.classList.add('hidden');
+            winnerCard.style.opacity = 0;
+        };
+
+        /** Adds a text entry. */
+        const addTextEntry = () => {
+            const name = textEntryInput.value.trim();
+            if (name) {
+                entries.push({ id: generateId(), name: name, type: "text" });
+                textEntryInput.value = '';
+                renderEntryList();
+                saveEntries();
+            }
+        };
+
+        /** Adds an image entry from a URL. */
+        const addImageUrlEntry = () => {
+            const url = imageUrlInput.value.trim();
+            // Basic URL validation
+            if (url && (url.startsWith('http') || url.startsWith('data:image'))) {
+                const name = url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf('.') > url.lastIndexOf('/') ? url.lastIndexOf('.') : url.length) || "Image Entry";
+                entries.push({ id: generateId(), name: name, type: "image", data: url });
+                imageUrlInput.value = '';
+                renderEntryList();
+                saveEntries();
+            }
+        };
+
+        /** Handles adding entries from file upload. */
+        const addFileEntries = (files) => {
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    entries.push({ id: generateId(), name: file.name, type: "image", data: e.target.result });
+                    renderEntryList();
+                    saveEntries();
+                };
+                reader.readAsDataURL(file); // Convert file to Base64 data URL
+            });
+            // Clear file input visually
+            imageFileInput.value = null;
+        };
+
+        /** Removes an entry by ID. */
+        const removeEntry = (id) => {
+            entries = entries.filter(e => e.id !== id);
+            renderEntryList();
+            saveEntries();
+            hideResult();
+        };
+
+        /** Clears all entries and local storage. */
+        const clearAllEntries = () => {
+            entries = [];
+            renderEntryList();
+            saveEntries();
+            hideResult();
+        };
+
+        // --- Wheel Drawing Logic ---
+
+        /** Draws the wheel slices, text, and images. */
+        const drawWheel = (rotation = 0) => {
+            // Clear canvas and apply rotation
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.translate(centerX, centerY); // Move origin to center
+            ctx.rotate(rotation);
+            ctx.translate(-centerX, -centerY); // Move origin back
+
+            const totalEntries = entries.length;
+            if (totalEntries === 0) {
+                ctx.restore(); // Restore context without drawing anything
+                // Draw a simple gray circle when empty
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+                ctx.fillStyle = '#e5e7eb';
+                ctx.fill();
+                return;
+            }
+
+            const arcSize = (2 * Math.PI) / totalEntries;
+
+            for (let i = 0; i < totalEntries; i++) {
+                const entry = entries[i];
+                const startAngle = i * arcSize;
+                const endAngle = (i + 1) * arcSize;
+                const sliceColor = WHEEL_COLORS[i % WHEEL_COLORS.length];
+
+                // 1. Draw Slice
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                ctx.lineTo(centerX, centerY);
+                ctx.closePath();
+                ctx.fillStyle = sliceColor;
+                ctx.fill();
+
+                // 2. Draw Content (Text/Image)
+                ctx.save();
+                ctx.translate(centerX, centerY); // Translate to center for rotation
+
+                // Calculate rotation for the content (center of the slice + 90 degrees/PI/2 for vertical alignment)
+                const contentAngle = startAngle + (arcSize / 2) + Math.PI / 2;
+                ctx.rotate(contentAngle);
+
+                // Determine distance from center
+                const textDistance = radius * 0.8;
+                const imageSize = 50; // Size of the image/icon
+
+                if (entry.type === 'text') {
+                    // Draw Text
+                    ctx.fillStyle = (i % 2 === 0) ? 'white' : 'black';
+                    ctx.font = '700 14px Inter';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(entry.name.toUpperCase(), 0, -textDistance);
+                } else if (entry.type === 'image' && entry.imageObject) {
+                    const img = entry.imageObject;
+                    const imgDistance = radius * 0.75; // Slightly closer for image
+
+                    // If image is loaded, draw it
+                    if (img.complete && img.naturalHeight !== 0) {
+                        ctx.drawImage(img, -imageSize / 2, -imgDistance - imageSize / 2, imageSize, imageSize);
+                    } else {
+                        // If image is loading or failed, draw placeholder and name
+                        ctx.fillStyle = 'white';
+                        ctx.fillRect(-imageSize / 2, -imgDistance - imageSize / 2, imageSize, imageSize);
+                        ctx.fillStyle = '#6b7280';
+                        ctx.font = '500 10px Inter';
+                        ctx.fillText('IMG', 0, -imgDistance);
+
+                        // Set onload handler only if not complete to prevent infinite loop
+                        if (!img.complete) {
+                            img.onload = () => drawWheel(rotation);
+                            img.onerror = () => drawWheel(rotation); // Also handle errors
+                        }
+                    }
+                }
+                ctx.restore(); // Restore context after drawing content
+            }
+
+            // Draw center circle
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius * 0.15, 0, 2 * Math.PI);
+            ctx.fillStyle = 'white';
+            ctx.fill();
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            ctx.restore(); // Restore context after rotation and drawing slices
+        };
+
+        // --- Spinning Logic ---
+
+        let currentRotation = 0;
+        let speed = 0;
+        const friction = 0.99; // Higher friction means faster stop
+
+        const spin = () => {
+            if (isSpinning || entries.length === 0) return;
+
+            hideResult(); // Hide any previous result
+            spinBtn.disabled = true;
+
+            isSpinning = true;
+
+            // Start with a randomized high speed
+            speed = Math.random() * 0.2 + 0.4;
+
+            // Calculate a random target stop position within a random slice
+            const totalEntries = entries.length;
+            const arcSize = (2 * Math.PI) / totalEntries;
+            
+            // Pick a random index and a random position within that slice
+            const winningIndex = Math.floor(Math.random() * totalEntries);
+            const targetSliceCenter = (winningIndex * arcSize) + (arcSize / 2);
+
+            // We want the target slice center to align with the pointer (-PI/2)
+            // Target angle (where the wheel needs to land)
+            let targetAngle = targetSliceCenter + (Math.PI / 2);
+
+            // Ensure the rotation is large enough (at least 6 full spins)
+            const fullSpins = 12 * Math.PI;
+
+            // Adjust target angle so it's always greater than the current rotation and includes the full spins
+            let totalTargetRotation = targetAngle + fullSpins;
+            
+            // Adjust to the nearest full spin + target
+            if (totalTargetRotation < currentRotation + fullSpins) {
+                totalTargetRotation += 2 * Math.PI * (Math.floor((currentRotation + fullSpins - totalTargetRotation) / (2 * Math.PI)) + 1);
+            }
+
+            // Animation function
+            const animateSpin = () => {
+                // Determine remaining rotation until target
+                const remaining = totalTargetRotation - currentRotation;
+
+                // Stop condition: if speed is very low OR we've passed the target (due to discrete steps)
+                if (remaining < 0.001 && speed < 0.001) {
+                    isSpinning = false;
+                    spinBtn.disabled = false;
+                    
+                    // Snap to the final position
+                    currentRotation = totalTargetRotation;
+                    drawWheel(currentRotation);
+                    
+                    // Determine the winner
+                    const winner = entries[winningIndex];
+                    displayResult(winner);
+                    
+                    return; // End animation
+                }
+
+                // Slow down dramatically as we approach the target
+                if (remaining < 2 * Math.PI) { // Within the last turn
+                    speed *= 0.99; // Apply friction
+                    speed = Math.max(speed, 0.0001); // Don't let speed go to zero instantly
+                    
+                    // Aggressively slow down if speed is too high near the end
+                    if (remaining < 0.5 && speed > 0.01) {
+                         speed = remaining / 50;
+                    }
+                    
+                } else {
+                    speed *= 0.995; // Less friction at start
+                }
+                
+                // Add current speed to total rotation
+                currentRotation += speed;
+
+                drawWheel(currentRotation);
+
+                requestAnimationFrame(animateSpin);
+            };
+
+            // Start the animation
+            animateSpin();
+        };
+
+        /** Displays the winning result to the user. */
+        const displayResult = (winner) => {
+            winnerName.textContent = winner.name;
+            winnerImageContainer.innerHTML = ''; // Clear previous content
+
+            if (winner.type === 'image' && winner.imageObject && winner.imageObject.complete) {
+                const img = document.createElement('img');
+                img.src = winner.data;
+                img.className = 'w-full h-full object-cover';
+                winnerImageContainer.appendChild(img);
+                winnerImageContainer.classList.remove('bg-gray-100');
+            } else {
+                // Default icon/placeholder for text or failed image
+                winnerImageContainer.innerHTML = `<i class="ph ph-confetti text-3xl text-accent-4"></i>`;
+                winnerImageContainer.classList.add('bg-gray-100');
+            }
+
+            // Show the card with animation
+            winnerCard.classList.remove('hidden');
+            setTimeout(() => {
+                winnerCard.style.opacity = 1;
+            }, 50); // Small delay to trigger CSS transition
+        };
+
+        // --- Event Listeners and Initialization ---
+
+        // Add Text Entry
+        addTextBtn.addEventListener('click', addTextEntry);
+        textEntryInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') addTextEntry();
+        });
+
+        // Add Image URL Entry
+        addImageUrlBtn.addEventListener('click', addImageUrlEntry);
+        imageUrlInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') addImageUrlEntry();
+        });
+
+        // Add Image File Entry
+        imageFileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) addFileEntries(e.target.files);
+        });
+
+        // Remove Entry Listener (Delegated)
+        entryList.addEventListener('click', (e) => {
+            const removeBtn = e.target.closest('.remove-entry-btn');
+            if (removeBtn) {
+                const id = removeBtn.getAttribute('data-id');
+                removeEntry(id);
+            }
+        });
+
+        // Controls
+        shuffleBtn.addEventListener('click', shuffleEntries);
+        clearAllBtn.addEventListener('click', clearAllEntries);
+        spinBtn.addEventListener('click', spin);
+
+        // Initial Setup on Load
+        window.onload = () => {
+            loadEntries();
+            renderEntryList();
+            drawWheel(0); // Draw the initial wheel state
+        };
+    </script>
+</body>
+
+</html>

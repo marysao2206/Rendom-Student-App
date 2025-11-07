@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Random Group Generator</title>
+  <!-- Load Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style1.css') }}">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'input-bg': '#f3f4f6',
+            // Defined colors for teams (using a simple scale for cleaner classes)
+            'team-1': '#38761d', // Dark Green
+            'team-2': '#f1c232', // Dark Yellow/Orange
+            'team-3': '#93c47d', // Light Green
+            'team-4': '#f9e6a0', // Light Yellow
+            'team-5': '#6aa84f', // Medium Green
+            'primary-btn': '#f9d146',
+            'secondary-btn': '#e6e6e6',
+          }
+        }
+      }
+    }
+  </script>
+</head>
+
+<body class="p-4 md:p-8">
+
+  <div class="navbar">
+    <div class="logo">Random Student App</div>
+    <div class="nav-links">
+      <a href="{{ url_for('home') }}">Spinner</a>
+      <a href="{{ url_for('group_page') }}">Group</a>
+      <a href="{{ url_for('images_page') }}">Image</a>
+    </div>
+  </div>
+  
+  <main class="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
+
+    <!-- 1. INPUTS Section -->
+    <div class="card p-4 flex flex-col order-1 lg:order-1">
+      <h2 class="text-xl font-bold mb-4 border-b pb-2">1. INPUTS</h2>
+
+      <!-- Add Multiple Members Input (Textarea) -->
+      <p class="text-sm font-medium text-gray-700 mb-1">Enter names (one per line or separated by commas):</p>
+      <textarea id="newMemberNamesInput" rows="4" placeholder="e.g. John, Jane, Peter, Mary, or list one name per line"
+        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm mb-3"></textarea>
+      <button id="addMembersBtn"
+        class="w-full bg-blue-600 text-white p-3 rounded-lg font-semibold hover:bg-blue-700 transition duration-150 active:bg-blue-800 mb-4"
+        aria-label="Add all listed members">ADD MEMBERS</button>
+
+      <!-- Member List -->
+      <div id="memberList" class="flex-grow overflow-y-auto space-y-2 max-h-96">
+        <!-- Member items will be injected here -->
+      </div>
+
+      <div class="mt-4 pt-4 border-t">
+        <button id="removeAllMembersBtn"
+          class="w-full text-sm bg-gray-200 text-gray-700 p-2 rounded-lg hover:bg-gray-300 transition duration-150">Remove
+          All Members</button>
+      </div>
+    </div>
+
+    <!-- 2. CONTROLLER Section -->
+    <div class="card p-4 order-3 lg:order-2">
+      <h2 class="text-xl font-bold mb-4 border-b pb-2">2. CONTROLLER</h2>
+
+      <div class="space-y-4">
+        <!-- Distribution Basis (Default only functional) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Distribute equally based on:</label>
+          <div class="flex space-x-4 text-sm">
+            <label class="inline-flex items-center">
+              <input type="radio" name="distribution" value="default" checked
+                class="form-radio text-blue-600 border-gray-300 rounded">
+              <span class="ml-2">Default (Random)</span>
+            </label>
+            <label class="inline-flex items-center opacity-50 cursor-not-allowed">
+              <input type="radio" name="distribution" value="gender" disabled
+                class="form-radio text-blue-600 border-gray-300 rounded">
+              <span class="ml-2">Gender (N/A)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Grouping Parameters -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Number of Groups (OR Max People/Group)</label>
+          <p class="text-xs text-gray-500 mb-2">Set either one to automatically calculate the other.</p>
+
+          <div class="flex space-x-4">
+            <div class="flex-1">
+              <label for="numGroups" class="block text-xs text-gray-600">Number of Groups</label>
+              <input type="number" id="numGroups" min="1" value="2"
+                class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+            </div>
+            <div class="flex-1">
+              <label for="maxPerGroup" class="block text-xs text-gray-600">Max People/Group</label>
+              <input type="number" id="maxPerGroup" min="1" placeholder="Auto"
+                class="w-full p-2 border bg-gray-100 border-gray-300 rounded-lg text-sm" disabled>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pick Representatives (Non-functional) -->
+        <div class="flex items-center opacity-50 cursor-not-allowed">
+          <input type="checkbox" id="pickRepresentatives" disabled
+            class="form-checkbox text-blue-600 border-gray-300 rounded">
+          <label for="pickRepresentatives" class="ml-2 text-sm text-gray-700">Pick representatives? (N/A)</label>
+        </div>
+      </div>
+
+      <button id="startGroupingBtn"
+        class="w-full bg-primary-btn text-gray-800 font-bold p-3 rounded-xl mt-6 shadow-md hover:shadow-lg transition duration-150 active:bg-yellow-400">
+        START GROUPING
+      </button>
+
+      <button id="clearResultsBtn"
+        class="w-full bg-secondary-btn text-gray-700 p-2 rounded-xl mt-3 hover:bg-gray-300 transition duration-150">
+        Clear Results
+      </button>
+    </div>
+
+    <!-- 3. RESULT Section -->
+    <div class="card p-4 order-2 lg:order-3">
+      <h2 class="text-xl font-bold mb-4 border-b pb-2">3. RESULT</h2>
+      <div id="resultsContainer" class="grid grid-cols-2 gap-4 max-h-[500px] overflow-y-auto">
+        <p id="resultsPlaceholder" class="text-gray-500 text-center col-span-2">Click START GROUPING to see results.</p>
+        <!-- Group boxes will be injected here -->
+      </div>
+      <div id="statusMessage" class="mt-4 p-2 text-center text-sm text-red-600 font-medium hidden"></div>
+    </div>
+  </main>
+
+  <script>
+    // --- Global Variables and Constants ---
+    const MEMBER_STORAGE_KEY = 'groupGeneratorMembers';
+    let members = [];
+
+    // Define placeholder images corresponding roughly to the color palette
+    const GROUP_IMAGES = [
+      'https://placehold.co/32x32/38761d/ffffff?text=1', // Dark Green
+      'https://placehold.co/32x32/f1c232/000000?text=2', // Dark Yellow/Orange
+      'https://placehold.co/32x32/93c47d/000000?text=3', // Light Green
+      'https://placehold.co/32x32/f9e6a0/000000?text=4', // Light Yellow
+      'https://placehold.co/32x32/6aa84f/ffffff?text=5', // Medium Green
+      'https://placehold.co/32x32/6b7280/ffffff?text=X', // Fallback Gray
+    ];
+
+    // --- DOM Elements ---
+    const memberList = document.getElementById('memberList');
+    const newMemberNamesInput = document.getElementById('newMemberNamesInput');
+    const addMembersBtn = document.getElementById('addMembersBtn');
+    const removeAllMembersBtn = document.getElementById('removeAllMembersBtn');
+    const startGroupingBtn = document.getElementById('startGroupingBtn');
+    const clearResultsBtn = document.getElementById('clearResultsBtn');
+    const numGroupsInput = document.getElementById('numGroups');
+    const maxPerGroupInput = document.getElementById('maxPerGroup');
+    const resultsContainer = document.getElementById('resultsContainer');
+    const resultsPlaceholder = document.getElementById('resultsPlaceholder');
+    const statusMessage = document.getElementById('statusMessage');
+
+    // --- Utility Functions ---
+
+    /** Generates a simple name ID for list keys. */
+    const generateId = (name) => name.toLowerCase().replace(/\s+/g, '-') + '-' + members.length + '-' + Date.now();
+
+    /** Saves the current members array to localStorage. */
+    const saveMembers = () => {
+      try {
+        localStorage.setItem(MEMBER_STORAGE_KEY, JSON.stringify(members));
+      } catch (error) {
+        console.error("Could not save to localStorage:", error);
+        displayStatus("Error: Could not save members. Storage is full or unavailable.", true);
+      }
+    };
+
+    /** Loads members from localStorage. */
+    const loadMembers = () => {
+      try {
+        const storedMembers = localStorage.getItem(MEMBER_STORAGE_KEY);
+        members = storedMembers ? JSON.parse(storedMembers) : [];
+        renderMemberList();
+      } catch (error) {
+        console.error("Could not load from localStorage:", error);
+        displayStatus("Error: Could not load members. Corrupt data or unavailable storage.", true);
+      }
+    };
+
+    /** Displays a status message to the user. */
+    const displayStatus = (message, isError = false) => {
+      statusMessage.textContent = message;
+      statusMessage.classList.remove('hidden', 'text-red-600', 'text-green-600');
+      statusMessage.classList.add(isError ? 'text-red-600' : 'text-green-600');
+      if (message) {
+        statusMessage.classList.remove('hidden');
+        // Only hide if it's not a critical error
+        if (!isError) {
+          setTimeout(() => { statusMessage.classList.add('hidden'); }, 4000);
+        }
+      } else {
+        statusMessage.classList.add('hidden');
+      }
+    };
+
+    // --- Member Management ---
+
+    /** Renders the list of members in the Inputs section. */
+    const renderMemberList = () => {
+      memberList.innerHTML = '';
+      if (members.length === 0) {
+        memberList.innerHTML = '<p class="text-center text-gray-500 pt-4">No members added yet.</p>';
+        return;
+      }
+
+      members.forEach((member) => {
+        const memberItem = document.createElement('div');
+        memberItem.id = `member-${member.id}`;
+        memberItem.className = 'flex items-center justify-between p-2 bg-input-bg rounded-lg';
+        memberItem.innerHTML = `
+                    <span class="text-sm font-medium text-gray-800">${member.name}</span>
+                    <button data-id="${member.id}" class="remove-member-btn text-red-500 hover:text-red-700 p-1 transition duration-150 rounded-full" aria-label="Remove ${member.name}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 10-2 0v6a1 1 0 102 0V8z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                `;
+        memberList.appendChild(memberItem);
+      });
+    };
+
+    /** Adds members from the input field (Textarea). */
+    const addInputMembers = () => {
+      const rawInput = newMemberNamesInput.value;
+      if (!rawInput.trim()) {
+        displayStatus("Please enter names in the box above.", true);
+        return;
+      }
+
+      // Split by comma or newline, then filter out empty strings
+      const newNames = rawInput.split(/[\n,]/)
+        .map(name => name.trim())
+        .filter(name => name.length > 0);
+
+      let addedCount = 0;
+      let ignoredCount = 0;
+
+      newNames.forEach(name => {
+        // Check for duplicates (case-insensitive)
+        if (members.some(m => m.name.toLowerCase() === name.toLowerCase())) {
+          ignoredCount++;
+          return;
+        }
+
+        members.push({
+          name: name,
+          // Use a unique ID
+          id: generateId(name)
+        });
+        addedCount++;
+      });
+
+      if (addedCount > 0) {
+        newMemberNamesInput.value = ''; // Clear the input area
+        renderMemberList();
+        saveMembers();
+        let message = `'${addedCount}' new member(s) added.`;
+        if (ignoredCount > 0) {
+          message += ` (${ignoredCount} ignored due to duplicates.)`;
+        }
+        displayStatus(message);
+        // Recalculate group info after member change
+        updateGroupingInputs();
+      } else if (ignoredCount > 0) {
+        displayStatus(`All ${ignoredCount} names were ignored because they already exist.`, true);
+      } else {
+        displayStatus("No valid names were found to add.", true);
+      }
+    };
+
+    /** Removes a member by ID. */
+    const removeMember = (id) => {
+      const index = members.findIndex(m => m.id === id);
+      if (index !== -1) {
+        const name = members[index].name;
+        members.splice(index, 1);
+        renderMemberList();
+        saveMembers();
+        clearResults(); // Clear results if members change
+        displayStatus(`'${name}' removed.`);
+        // Recalculate group info after member change
+        updateGroupingInputs();
+      }
+    };
+
+    /** Removes all members. */
+    const removeAllMembers = () => {
+      if (members.length > 0) {
+        members = [];
+        renderMemberList();
+        saveMembers();
+        clearResults();
+        displayStatus("All members removed.");
+        updateGroupingInputs();
+      }
+    };
+
+    // --- Grouping Logic ---
+
+    /** Fisher-Yates (Knuth) Shuffle algorithm. */
+    const shuffleArray = (array) => {
+      const shuffled = [...array];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    };
+
+    /** Generates the groups based on input parameters. */
+    const generateGroups = () => {
+      clearResults(false);
+
+      if (members.length === 0) {
+        displayStatus("Cannot group: The member list is empty.", true);
+        return;
+      }
+
+      const totalMembers = members.length;
+      const numGroupsValue = parseInt(numGroupsInput.value);
+      const maxPerGroupValue = parseInt(maxPerGroupInput.getAttribute('data-calculated') || maxPerGroupInput.value);
+
+      let finalNumGroups;
+
+      // Determine grouping parameter
+      if (numGroupsInput.disabled && maxPerGroupValue > 0) {
+        // Grouping by Max People/Group (primary)
+        finalNumGroups = Math.ceil(totalMembers / maxPerGroupValue);
+      } else if (!numGroupsInput.disabled && numGroupsValue > 0) {
+        // Grouping by Number of Groups (primary)
+        finalNumGroups = numGroupsValue;
+      } else {
+        displayStatus("Please set a valid Number of Groups (min 1).", true);
+        return;
+      }
+
+      if (finalNumGroups > totalMembers) {
+        displayStatus(`Cannot create ${finalNumGroups} groups with only ${totalMembers} members. Adjusting to ${totalMembers} groups.`, true);
+        finalNumGroups = totalMembers;
+      }
+
+      if (finalNumGroups <= 0) {
+        displayStatus("The calculated number of groups is zero. Please check your inputs.", true);
+        return;
+      }
+
+
+      const shuffledMembers = shuffleArray(members.map(m => m.name));
+      // Initialize groups array
+      const groups = Array.from({ length: finalNumGroups }, () => []);
+
+      // Distribute members one by one in a round-robin fashion
+      shuffledMembers.forEach((member, index) => {
+        const groupIndex = index % finalNumGroups;
+        groups[groupIndex].push(member);
+      });
+
+      renderResults(groups);
+    };
+
+    // --- Results Display ---
+
+    const clearResults = (showPlaceholder = true) => {
+      resultsContainer.innerHTML = '';
+      if (showPlaceholder) {
+        resultsContainer.appendChild(resultsPlaceholder);
+        resultsPlaceholder.classList.remove('hidden');
+      } else {
+        resultsPlaceholder.classList.add('hidden');
+      }
+    };
+
+    /** Renders the generated groups. */
+    const renderResults = (groups) => {
+      clearResults(false);
+
+      // Define Tailwind color classes for border and background header
+      const teamClasses = [
+        'border-team-1 bg-team-1', // Team 1
+        'border-team-2 bg-team-2', // Team 2
+        'border-team-3 bg-team-3', // Team 3
+        'border-team-4 bg-team-4', // Team 4
+        'border-team-5 bg-team-5', // Team 5
+        'border-gray-500 bg-gray-600', // Fallback for many groups
+      ];
+
+      groups.forEach((group, index) => {
+        const teamIndex = index % teamClasses.length;
+        const baseClass = teamClasses[teamIndex];
+        const groupName = `Team ${index + 1}`;
+
+        // Get the border class for the outer box
+        const outerBorderClass = baseClass.split(' ')[0];
+        // Get the background class for the header bar
+        const headerBgClass = baseClass.split(' ')[1];
+
+        // --- NEW: Get Image URL for the team ---
+        const groupImage = GROUP_IMAGES[teamIndex % GROUP_IMAGES.length];
+
+
+        const groupBox = document.createElement('div');
+        groupBox.className = `group-box ${outerBorderClass}`;
+        groupBox.innerHTML = `
+                    <div class="group-title-bar ${headerBgClass} text-lg flex items-center">
+                        <img src="${groupImage}" alt="${groupName} Icon" class="w-6 h-6 rounded-full mr-2 border-2 border-white object-cover" onerror="this.onerror=null;this.src='https://placehold.co/32x32/6b7280/ffffff?text=X';">
+                        <span>${groupName} (${group.length})</span>
+                    </div>
+                    <div class="p-2 pt-0">
+                        ${group.map(name => `<span class="member-name text-sm">${name}</span>`).join('')}
+                        ${group.length === 0 ? '<p class="text-xs italic text-gray-400">Empty group</p>' : ''}
+                    </div>
+                `;
+        resultsContainer.appendChild(groupBox);
+      });
+      displayStatus(`Successfully created ${groups.length} groups.`);
+    };
+
+
+    // --- Event Listeners and Initial Setup ---
+
+    // Input Members via button (handles bulk input from textarea)
+    addMembersBtn.addEventListener('click', addInputMembers);
+
+    // Remove Member Listener (delegated)
+    memberList.addEventListener('click', (e) => {
+      if (e.target.closest('.remove-member-btn')) {
+        const id = e.target.closest('.remove-member-btn').getAttribute('data-id');
+        removeMember(id);
+      }
+    });
+
+    // Remove All Members
+    removeAllMembersBtn.addEventListener('click', removeAllMembers);
+
+    // Start Grouping
+    startGroupingBtn.addEventListener('click', generateGroups);
+
+    // Clear Results
+    clearResultsBtn.addEventListener('click', clearResults);
+
+    // Handle mutual exclusivity of grouping inputs
+    const updateGroupingInputs = () => {
+      const totalMembers = members.length;
+      const numGroups = parseInt(numGroupsInput.value) || 0;
+      const maxPerGroup = parseInt(maxPerGroupInput.value) || 0;
+
+      // Only update the calculated field if we are grouping by Num Groups
+      if (!numGroupsInput.disabled && numGroups > 0 && totalMembers > 0) {
+        const calculatedMax = Math.ceil(totalMembers / numGroups);
+        maxPerGroupInput.value = calculatedMax;
+        maxPerGroupInput.setAttribute('data-calculated', calculatedMax);
+      } else if (!maxPerGroupInput.disabled && maxPerGroup > 0 && totalMembers > 0) {
+        // Only update the calculated field if we are grouping by Max Per Group
+        const calculatedGroups = Math.ceil(totalMembers / maxPerGroup);
+        numGroupsInput.value = calculatedGroups;
+        numGroupsInput.setAttribute('data-calculated', calculatedGroups);
+      } else if (totalMembers === 0) {
+        // Reset inputs if no members
+        numGroupsInput.value = 1; // Default
+        maxPerGroupInput.value = '';
+        maxPerGroupInput.placeholder = 'Auto';
+        numGroupsInput.setAttribute('data-calculated', 1);
+        maxPerGroupInput.setAttribute('data-calculated', '');
+
+      } else if (numGroupsInput.disabled) {
+        // If maxPerGroup is manually set, update the numGroups display
+        const calculatedGroups = maxPerGroup > 0 ? Math.ceil(totalMembers / maxPerGroup) : 1;
+        numGroupsInput.value = calculatedGroups;
+        numGroupsInput.setAttribute('data-calculated', calculatedGroups);
+      } else if (maxPerGroupInput.disabled) {
+        // If numGroups is manually set, update the maxPerGroup display
+        const calculatedMax = numGroups > 0 ? Math.ceil(totalMembers / numGroups) : totalMembers;
+        maxPerGroupInput.value = calculatedMax;
+        maxPerGroupInput.setAttribute('data-calculated', calculatedMax);
+      }
+    };
+
+    // Switch to grouping by Number of Groups (Default)
+    const setNumGroupsPrimary = () => {
+      numGroupsInput.disabled = false;
+      maxPerGroupInput.disabled = true;
+      maxPerGroupInput.classList.add('bg-gray-100');
+      numGroupsInput.classList.remove('bg-gray-100');
+      maxPerGroupInput.placeholder = 'Auto';
+      // Clear the *actual* value of the secondary input when switching modes
+      maxPerGroupInput.value = '';
+      updateGroupingInputs();
+    };
+
+    // Switch to grouping by Max People/Group
+    const setMaxPerGroupPrimary = () => {
+      numGroupsInput.disabled = true;
+      maxPerGroupInput.disabled = false;
+      maxPerGroupInput.classList.remove('bg-gray-100');
+      numGroupsInput.classList.add('bg-gray-100');
+      numGroupsInput.placeholder = 'Auto';
+      // Clear the *actual* value of the secondary input when switching modes
+      numGroupsInput.value = '';
+      updateGroupingInputs();
+    };
+
+    numGroupsInput.addEventListener('input', setNumGroupsPrimary);
+    // If they click on the max per group input, switch to that mode
+    maxPerGroupInput.addEventListener('focus', setMaxPerGroupPrimary);
+    maxPerGroupInput.addEventListener('input', setMaxPerGroupPrimary);
+
+
+    // Initial Load
+    window.onload = () => {
+      loadMembers();
+      // Set initial state for grouping inputs: Number of Groups is primary
+      setNumGroupsPrimary();
+    };
+  </script>
+</body>
+
+</html>
